@@ -1,4 +1,8 @@
+from __future__ import print_function
+from builtins import next
+from builtins import range
 from perceptual.filterbank import *
+import cProfile
 
 import cv2
 
@@ -23,7 +27,7 @@ def phaseBasedMagnify(vidFname, vidFnameOut, maxFrames, windowSize, factor, fpsF
     steer = Steerable(5)
     pyArr = Pyramid2arr(steer)
 
-    print "Reading:", vidFname,
+    print("Reading:", vidFname, end=' ')
 
     # get vid properties
     vidReader = cv2.VideoCapture(vidFname)
@@ -45,14 +49,14 @@ def phaseBasedMagnify(vidFname, vidFnameOut, maxFrames, windowSize, factor, fpsF
     if np.isnan(fps):
         fps = 30
 
-    print ' %d frames' % vidFrames,
-    print ' (%d x %d)' % (width, height),
-    print ' FPS:%d' % fps
+    print(' %d frames' % vidFrames, end=' ')
+    print(' (%d x %d)' % (width, height), end=' ')
+    print(' FPS:%d' % fps)
 
     # video Writer
     fourcc = func_fourcc('M', 'J', 'P', 'G')
     vidWriter = cv2.VideoWriter(vidFnameOut, fourcc, int(fps), (width,height), 1)
-    print 'Writing:', vidFnameOut
+    print('Writing:', vidFnameOut)
 
     # how many frames
     nrFrames = min(vidFrames, maxFrames)
@@ -64,9 +68,9 @@ def phaseBasedMagnify(vidFname, vidFnameOut, maxFrames, windowSize, factor, fpsF
     filter = IdealFilterWindowed(windowSize, lowFreq, highFreq, fps=fpsForBandPass, outfun=lambda x: x[0])
     #filter = ButterBandpassFilter(1, lowFreq, highFreq, fps=fpsForBandPass)
 
-    print 'FrameNr:', 
+    print('FrameNr:', end=' ') 
     for frameNr in range( nrFrames + windowSize ):
-        print frameNr,
+        print(frameNr, end=' ')
         sys.stdout.flush() 
 
         if frameNr < nrFrames:
@@ -93,17 +97,19 @@ def phaseBasedMagnify(vidFname, vidFnameOut, maxFrames, windowSize, factor, fpsF
 
 
             phases = np.angle(arr)
+            #print(coeff.shape, coeff, arr.shape, arr, phases.shape, phases)
 
             # add to temporal filter
-            filter.update([phases])
+            # filter.update([phases])
+            filter.update([grayIm.flatten()])
 
             # try to get filtered output to continue            
             try:
-                filteredPhases = filter.next()
+                filteredPhases = next(filter)
             except StopIteration:
                 continue
 
-            print '*',
+            print('*', end=' ')
             
             # motion magnification
             magnifiedPhases = (phases - filteredPhases) + filteredPhases*factor
@@ -138,10 +144,10 @@ def phaseBasedMagnify(vidFname, vidFnameOut, maxFrames, windowSize, factor, fpsF
 
 ################# main script
 
-#vidFname = 'media/baby.mp4';
+vidFname = 'media/test.avi'
 #vidFname = 'media/WIN_20151208_17_11_27_Pro.mp4.normalized.avi'
 #vidFname = 'media/embryos01_30s.mp4'
-vidFname = 'media/guitar.mp4'
+#vidFname = 'media/guitar.mp4'
 
 # maximum nr of frames to process
 maxFrames = 60000
@@ -150,15 +156,15 @@ windowSize = 30
 # the magnifaction factor
 factor = 20
 # the fps used for the bandpass
-fpsForBandPass = 600 # use -1 for input video fps
+fpsForBandPass = -1 # use -1 for input video fps
 # low ideal filter
-lowFreq = 72
+lowFreq = 0.2
 # high ideal filter
-highFreq = 92
+highFreq = 2
 # output video filename
 vidFnameOut = vidFname + '-Mag%dIdeal-lo%d-hi%d.avi' % (factor, lowFreq, highFreq)
 
 phaseBasedMagnify(vidFname, vidFnameOut, maxFrames, windowSize, factor, fpsForBandPass, lowFreq, highFreq)
 
 
-
+#cProfile.run('phaseBasedMagnify(vidFname, vidFnameOut, maxFrames, windowSize, factor, fpsForBandPass, lowFreq, highFreq)')

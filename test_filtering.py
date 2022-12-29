@@ -1,16 +1,16 @@
 import temporal_filters
 from temporal_filters import *
-from matplotlib.pylab import *
+from matplotlib.pyplot import *
 import numpy as np
 
 fps = 60
 secs = 3
 n = fps * secs
 ts = np.linspace(0, secs, n)
-noise = np.random.rand(n) * .2
-fq1 = sin(ts * 2 * pi * 1)
-fq2 = sin(ts * 2 * pi * 7)
-fq3 = sin(ts * 2 * pi * 12)
+noise = np.random.rand(n) * 1
+fq1 = np.sin(ts * 2 * np.pi * 1)
+fq2 = np.sin(ts * 2 * np.pi * 7)
+fq3 = np.sin(ts * 2 * np.pi * 12)
 data = fq1*1 + fq2*1 + fq3 + noise
 
 win = IdealFilterWindowed(60, 4, 9, fps, outfun=lambda x: x[0])

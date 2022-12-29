@@ -4,11 +4,16 @@ Created on Mon Dec 21 17:52:29 2015
 
 @author: jkooij
 """
+from __future__ import division
 
+from builtins import next
+from builtins import object
 import numpy as np
 import scipy.signal
+import matplotlib.pyplot as plt
 
 import scipy.fftpack as fftpack
+import scipy.fft as newfft
 #import pyfftw.interfaces.scipy_fftpack as fftpack
 
 
@@ -36,7 +41,7 @@ class SlidingWindow (object):
             self.update(data)
             while True:
                 try:
-                    out = self.next()
+                    out = next(self)
                     yield out
                 except StopIteration:
                     break
@@ -47,7 +52,7 @@ class SlidingWindow (object):
         else:
             self.memory = np.concatenate((self.memory, data), axis=0)
         
-    def next(self):
+    def __next__(self):
         if self.memory is not None and self.memory.shape[0] >= self.size:
             # get window
             out = self.memory[:self.size]
@@ -64,7 +69,7 @@ class SlidingWindow (object):
         out = []
         while True:
             try:
-                out.append(self.next())
+                out.append(next(self))
             except StopIteration:
                 break
         return np.array(out)
@@ -95,9 +100,12 @@ class IdealFilter (object):
             self.NFFT = data.shape[0]
             self.__set_mask()            
             
-        fft = fftpack.fft(data, axis=axis)        
-        fft[self.mask] = 0   
-        return np.real( fftpack.ifft(fft, axis=axis) )        
+        fft = newfft.fft(data, axis=axis)
+        
+        plt.plot(self.frequencies[self.NFFT//2:], np.sum(fft, axis=1)[self.NFFT//2:])
+        plt.show()
+        fft[self.mask] = 0
+        return np.real( newfft.ifft(fft, axis=axis) )        
 
 class IdealFilterWindowed (SlidingWindow):
     
@@ -106,8 +114,8 @@ class IdealFilterWindowed (SlidingWindow):
         self.filter = IdealFilter(wl, wh, fps=fps, NFFT=winsize)
         self.outfun = outfun
         
-    def next(self):
-        out = SlidingWindow.next(self)
+    def __next__(self):
+        out = SlidingWindow.__next__(self)
         out = self.filter(out)
         if self.outfun is not None:
             # apply output function, e.g. to return first (most recent) item
@@ -152,14 +160,14 @@ class IIRFilter (SlidingWindow):
             
         SlidingWindow.update(self, data)
 
-    def next(self):
-        winx = SlidingWindow.next(self)
-        winy = self.windowy.next()
+    def __next__(self):
+        winx = SlidingWindow.__next__(self)
+        winy = next(self.windowy)
         y = np.dot(self.b_, winx) - np.dot(self.a_, winy)
 
         self.windowy.update([y])
             
-        return y / self.a[0]
+        return y/ self.a[0]
 
         
 class ButterFilter (IIRFilter):
@@ -181,7 +189,7 @@ class ButterBandpassFilter (ButterFilter):
         ButterFilter.update(self, data)
         self.lowpass.update(data)
     
-    def next(self):
-        out = ButterFilter.next(self)
-        out_low = self.lowpass.next()
+    def __next__(self):
+        out = ButterFilter.__next__(self)
+        out_low = next(self.lowpass)
         return (out - out_low)

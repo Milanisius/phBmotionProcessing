@@ -5,17 +5,21 @@ Created on Mon Dec 21 18:19:12 2015
 @author: jkooij
 """
 
+from builtins import zip
+from builtins import next
+from builtins import range
+from builtins import object
 import numpy as np
 
-class Pyramid2arr:
+class Pyramid2arr(object):
     '''Class for converting a pyramid to/from a 1d array'''
     
     def __init__(self, steer, coeff=None):
         """
         Initialize class with sizes from pyramid coeff
         """
-        self.levels = range(1, steer.height-1)
-        self.bands = range(steer.nbands)
+        self.levels = list(range(1, steer.height-1))
+        self.bands = list(range(steer.nbands))
         
         self._indices = None
         if coeff is not None:
@@ -33,7 +37,7 @@ class Pyramid2arr:
         
         # precompute indices of each band
         offsets = np.cumsum([0] + sizes)
-        self._indices = zip(offsets[:-1], offsets[1:], shapes)
+        self._indices = list(zip(offsets[:-1], offsets[1:], shapes))
 
     def p2a(self, coeff):
         """
@@ -59,10 +63,10 @@ class Pyramid2arr:
         # create iterator that convert array to images
         it = (np.reshape(bandArray[istart:iend], size) for (istart,iend,size) in self._indices)
         
-        coeffs = [it.next()]
+        coeffs = [next(it)]
         for lvl in self.levels:
-            coeffs.append([it.next() for band in self.bands])
-        coeffs.append(it.next())
+            coeffs.append([next(it) for band in self.bands])
+        coeffs.append(next(it))
 
         return coeffs
 
